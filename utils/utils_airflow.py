@@ -1,10 +1,19 @@
+'''
+
+This utils file contains helper functions to enhance readability in an Airflow DAG by simplifying
+EMR cluster and Spark job creation
+
+'''
+
+
 import logging
 
-#airflow hooks
 from airflow.providers.amazon.aws.hooks.s3 import S3Hook
 
 log_start = "Starting to "
 log_finish = "Finished "
+
+#EMR-related helper functions
 
 def create_spark_job(job_name,file_path, dependencies_path, executor_memory,driver_memory, shuffle_partitions):
     spark_step= [
@@ -133,7 +142,7 @@ def cluster_config(jobflow_name,master_type, worker_type, master_instances, work
     return cluster_conf
 
 
-#python functions
+#python functions (to be used in the Python operator in a DAG file)
 
 def check_data_exists(aws_conn, bucket, prefix):
     logging.info(f'{log_start} check that data exists in s3 bucket: {bucket}')
@@ -144,11 +153,11 @@ def check_data_exists(aws_conn, bucket, prefix):
     logging.info(f'{log_finish} check that data exists in s3 bucket: {bucket}')
 
 
-def upload_data(aws_conn,local_file, bucket):
-    s3 = S3Hook(aws_conn)
+def upload_data(aws_conn,local_file,file_key, bucket):
     try:
+        s3 = S3Hook(aws_conn)
         logging.info(f"{log_start} uploading data onto S3 bucket")
-        s3.load_file(filename=local_file, bucket_name=bucket, replace=True)
+        s3.load_file(filename=local_file, key=file_key ,bucket_name=bucket, replace=True)
         logging.info(f"{log_finish} uploading data onto S3 bucket")
     except Exception as e:
         logging.info(e)
