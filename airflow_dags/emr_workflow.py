@@ -33,28 +33,33 @@ my_first_job = utils_airflow.create_spark_job("My_first_job",
 #default args for DAG
 default_args = {
     'owner': 'Airflow',
-    'start_date': datetime(2021, 3, 12),
     'retries': 1,
-    'retry_delay': timedelta(seconds=5)
+    'retry_delay': timedelta(seconds=5),
+    "email": ["sotogarcia.r@icloud.com"],
+    "email_on_failure": True,
+    "email_on_retry":True
 }
 
 #workflow
 
-with DAG(
-    'My_dag_ID',  #set your own dag ID for tracking in the airflow UI
-    schedule_interval=timedelta(days=1),
-    default_args=default_args,
-    max_active_runs=1) \
-        as my_dag:
+with DAG(dag_id="my_first_dag",
+         start_date=datetime(2021,4,8),
+         schedule_interval=timedelta(days=1),
+         end_date=datetime(2022, 4, 8),
+         default_args=default_args) as dag:
 
 
     upload_data = PythonOperator(task_id="upload_data_s3",
                                  python_callable=utils_airflow.upload_data,
-                                 op_kwargs={"aws_conn": "my_aws_conn", "bucket": "bucket", "local_file": "some_file_path"})
+                                 op_kwargs={"aws_conn": "my_aws_conn",
+                                            "bucket": "bucket",
+                                            "local_file": "some_file_path"})
 
     check_data_exists_task = PythonOperator(task_id='check_data_exists',
                                             python_callable=utils_airflow.check_data_exists,
-                                            op_kwargs= {"aws_conn": "my_aws_conn", "bucket":"my_bucket", "prefix": "file_name"},
+                                            op_kwargs= {"aws_conn": "my_aws_conn",
+                                                        "bucket":"my_bucket",
+                                                        "prefix": "file_name"},
                                             provide_context=False)
 
     create_job_flow_task = EmrCreateJobFlowOperator(

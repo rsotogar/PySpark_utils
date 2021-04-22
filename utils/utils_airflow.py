@@ -7,7 +7,6 @@ EMR cluster and Spark job creation
 
 
 import logging
-
 from airflow.providers.amazon.aws.hooks.s3 import S3Hook
 
 log_start = "Starting to "
