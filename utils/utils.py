@@ -60,7 +60,7 @@ class DataInterceptor:
         else:
             before_read = dt.now()
             df = self.spark.read.format("jdbc") \
-                .option(url = sql_url,
+                .options(url = sql_url,
                         driver = self.sql_driver,
                         user = sql_user,
                         dbtable = sql_query,
