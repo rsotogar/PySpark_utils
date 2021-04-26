@@ -14,7 +14,7 @@ log_finish = "Finished "
 
 #EMR-related helper functions
 
-def create_spark_job(job_name,file_path, dependencies_path, executor_memory,driver_memory, shuffle_partitions):
+def create_spark_job(job_name,file_path, dependencies_path, executor_memory,driver_memory, memory_fraction, shuffle_partitions):
     spark_step= [
         {
             "Name": job_name,
@@ -24,6 +24,7 @@ def create_spark_job(job_name,file_path, dependencies_path, executor_memory,driv
                 "Args": ["spark-submit", "--deploy-mode", "client",
                                "--conf", f"spark.driver.memory= {driver_memory}",
                                "--conf", f"spark.executor.memory={executor_memory}",
+                               "--conf", f"spark.memory.fraction={memory_fraction}",
                                "--conf", f"spark.sql.shuffle.partitions={shuffle_partitions}",
                                "--py-files", dependencies_path, file_path]
             }
