@@ -15,7 +15,7 @@ log_finish = "Finished "
 #EMR-related helper functions
 
 def create_spark_job(job_name,file_path, dependencies_path, executor_memory, memory_fraction, shuffle_partitions, driver_memory = None):
-    if driver_memory is None:
+    if driver_memory is not None:
         spark_step = [
             {
                 "Name": job_name,
