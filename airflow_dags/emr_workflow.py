@@ -27,8 +27,9 @@ cluster_conf = utils_airflow.cluster_config("My_job_flow",
 my_first_job = utils_airflow.create_spark_job("My_first_job",
                                 file_path= "s3://some_bucket/subfolder/pyspark_job.py",
                                 dependencies_path="s3://some_bucket/dependencies/dependencies.zip",
-                                executor_memory=8,
-                                shuffle_partitions=10)
+                                executor_memory="8g",
+                                shuffle_partitions=10,
+                                memory_fraction= 0.8)
 
 #default args for DAG
 default_args = {
@@ -62,33 +63,25 @@ with DAG(dag_id="my_first_dag",
                                                         "prefix": "file_name"},
                                             provide_context=False)
 
-    create_job_flow_task = EmrCreateJobFlowOperator(
-        task_id='create_job_flow',
-        aws_conn_id='aws_default',
-        emr_conn_id='emr_default',
-        job_flow_overrides=cluster_conf
-    )
+    create_job_flow_task = EmrCreateJobFlowOperator(task_id='create_job_flow',
+                                                    aws_conn_id='aws_default',
+                                                    emr_conn_id='emr_default',
+                                                    job_flow_overrides=cluster_conf)
 
-    add_step_task = EmrAddStepsOperator(
-        task_id='My_first_job',
-        job_flow_id="{{ task_instance.xcom_pull(task_ids='create_job_flow', key='return_value') }}",
-        aws_conn_id='my_aws_conn',
-        steps=my_first_job
-    )
+    add_step_task = EmrAddStepsOperator(task_id='My_first_job',
+                                        job_flow_id="{{ task_instance.xcom_pull(task_ids='create_job_flow', key='return_value') }}",
+                                        aws_conn_id='my_aws_conn',
+                                        steps=my_first_job)
 
-    watch_prev_step_task = EmrStepSensor(
-        task_id='watch_prev_step',
-        job_flow_id="{{task_instance.xcom_pull(task_ids='create_job_flow', key='return_value')}}",
-        step_id="{{task_instance.xcom_pull(task_ids='My_first_job', key='return_value')}}",
-        aws_conn_id='aws_default'
-    )
+    watch_prev_step_task = EmrStepSensor(task_id='watch_prev_step',
+                                        job_flow_id="{{task_instance.xcom_pull(task_ids='create_job_flow', key='return_value')}}",
+                                        step_id="{{task_instance.xcom_pull(task_ids='My_first_job', key='return_value')}}",
+                                        aws_conn_id='aws_default')
 
-    terminate_job_flow_task = EmrTerminateJobFlowOperator(
-        task_id='terminate_job_flow',
-        job_flow_id="{{task_instance.xcom_pull(task_ids='create_job_flow', key='return_value')}}",
-        aws_conn_id='aws_default',
-        trigger_rule="all_done"
-    )
+    terminate_job_flow_task = EmrTerminateJobFlowOperator(task_id='terminate_job_flow',
+                                                          job_flow_id="{{task_instance.xcom_pull(task_ids='create_job_flow', key='return_value')}}",
+                                                          aws_conn_id='aws_default',
+                                                          trigger_rule="all_done")
 
 #dependencies
 

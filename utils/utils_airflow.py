@@ -14,25 +14,43 @@ log_finish = "Finished "
 
 #EMR-related helper functions
 
-def create_spark_job(job_name,file_path, dependencies_path, executor_memory,driver_memory, memory_fraction, shuffle_partitions):
-    spark_step= [
-        {
-            "Name": job_name,
-            "ActionOnFailure": "CONTINUE",
-            "HadoopJarStep": {
-                "Jar": "command-runner.jar",
-                "Args": ["spark-submit", "--deploy-mode", "client",
-                               "--conf", f"spark.driver.memory= {driver_memory}",
-                               "--conf", f"spark.executor.memory={executor_memory}",
-                               "--conf", f"spark.memory.fraction={memory_fraction}",
-                               "--conf", f"spark.sql.shuffle.partitions={shuffle_partitions}",
-                               "--py-files", dependencies_path, file_path]
+def create_spark_job(job_name,file_path, dependencies_path, executor_memory, memory_fraction, shuffle_partitions, driver_memory = None):
+    if driver_memory is None:
+        spark_step = [
+            {
+                "Name": job_name,
+                "ActionOnFailure": "CONTINUE",
+                "HadoopJarStep": {
+                    "Jar": "command-runner.jar",
+                    "Args": ["spark-submit", "--deploy-mode", "client",
+                                   "--conf", f"spark.driver.memory={driver_memory}",
+                                   "--conf", f"spark.executor.memory={executor_memory}",
+                                   "--conf", f"spark.memory.fraction={memory_fraction}",
+                                   "--conf", f"spark.sql.shuffle.partitions={shuffle_partitions}",
+                                   "--py-files", dependencies_path, file_path]
+                }
             }
-        }
-    ]
+        ]
+    else:
+        spark_step = [
+            {
+                "Name": job_name,
+                "ActionOnFailure": "CONTINUE",
+                "HadoopJarStep": {
+                    "Jar": "command-runner.jar",
+                    "Args": ["spark-submit", "--deploy-mode", "client",
+                             "--conf", f"spark.driver.memory=1g",
+                             "--conf", f"spark.executor.memory={executor_memory}",
+                             "--conf", f"spark.memory.fraction={memory_fraction}",
+                             "--conf", f"spark.sql.shuffle.partitions={shuffle_partitions}",
+                             "--py-files", dependencies_path, file_path]
+                }
+            }
+        ]
     return spark_step
 
-def cluster_config(jobflow_name,master_type, worker_type, master_instances, worker_instances, cluster_region, bootstrap_path = None):
+def cluster_config(jobflow_name,master_type, worker_type, master_instances,
+                   worker_instances, cluster_region, bootstrap_path = None):
     if bootstrap_path is not None:
         cluster_conf = {"Name": jobflow_name,
                         "LogUri": "s3://emr-pipeline-id-XXX/XXX/",
