@@ -1,10 +1,21 @@
 from utils import utils
 import logging
+import pyspark.sql.functions as F
+from pyspark.sql.types import StructType, StringType, IntegerType, StructField
+
+def filter_data_by_name(df, data):
+    for column in df.columns:
+        df_filtered = df.filter(F.col(column) == data)
+        if df_filtered.count() > 0:
+            return True
+    return False
 
 
 def main():
-    df_actors = utils.data_interceptor.read_mongo(mongo_database="test", collection="actors")
-    print(df_actors.show())
+    df = utils.data_interceptor.read_mongo("test", "actors")
+    print(df.show())
+
+
 
 
 
@@ -34,5 +45,6 @@ if __name__ == "__main__":
 
     #set mongo database parameters to facilitate data access
     utils.data_interceptor.set_mongo_params(mongo_host, mongo_user, mongo_pass)
+    spark = utils.data_interceptor.get_spark_session()
 
     main()
