@@ -2,7 +2,7 @@ from pyspark.sql import SparkSession
 from pyspark import SparkConf
 from datetime import datetime as dt
 
-#clase contenedora del logger y otros atributos que facilitan la interaccion \\
+#this class simplifies data import from several data sources (SQL databases, MongoDB) by abstracting the underlying pyspark methods.
 
 
 class DataInterceptor:
@@ -36,6 +36,15 @@ class DataInterceptor:
         self.sql_driver = sql_driver
 
     def read_sql(self, sql_query, sql_host = None, sql_password = None, sql_user = None, cache = False):
+        '''
+        :param sql_query: the SQL query to retrieve from a table in a SQL database
+        :param sql_host: DNS. When None, the class attribute self.sql_host is used here
+        :param sql_password: user password. When None, the class attribute self.sql_password is used here
+        :param sql_user: user name. When None, the class attribute self.sql_user is used here
+        :param cache: whether to cache the resulting dataframe in memory of a Spark cluster. Default is False
+        :return: spark dataframe
+        '''
+
         if sql_host is None:
             sql_host = self.sql_host
         if sql_password is None:
@@ -79,6 +88,16 @@ class DataInterceptor:
         self.mongo_pass = mongo_pass
 
     def read_mongo(self, mongo_database, collection, mongo_host = None, mongo_user = None, mongo_pass = None,pipeline = None):
+        '''
+        :param mongo_database: the mongo database containing the collection to read from
+        :param collection: the mongo collection to import as a spark dataframe
+        :param mongo_host: server DNS. When None, the class attribute self.mongo_host is used here
+        :param mongo_user: user name. When None, the class attribute self.mongo_user is used here
+        :param mongo_pass: user password. When None, the class attribute self.mongo_pass is used here
+        :param pipeline: the query used to find documents within the mongo collection. When None, the entire collection is imported
+        :return: spark dataframe
+        '''
+
         if mongo_host is None:
             mongo_host = self.mongo_host
         if mongo_user is None:
@@ -106,6 +125,12 @@ class DataInterceptor:
         return df
 
     def read_parquet(self, path, schema, partition_number):
+        '''
+        :param path: the path in the file system pointing to the parquet file to be imported
+        :param schema: the schema to use if data import fails (or when returning an empty dataframe).
+        :param partition_number: the number of partitions of the resulting spark dataframe
+        :return: spark dataframe
+        '''
         try:
             before_read = dt.now()
             df = self.spark.read.parquet(path).repartition(partition_number)
@@ -118,7 +143,7 @@ class DataInterceptor:
         except Exception as e:
             self.logger.info(e)
             self.logger.info("Acessing S3 path failed. Creating empty dataframe with specified schema")
-            df = self.spark.createDataFrame(self.spark.sparkContext.emptyRDD(), schema)
+            df = self.spark.createDataFrame(self.spark.sparkContext.emptyRDD(), schema).repartition(partition_number)
 
         df.cache()
         df.count()

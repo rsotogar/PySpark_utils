@@ -17,3 +17,9 @@ I
 ..idea/inspectionProfiles/profiles_settings.xml,1/e/1e9075f5bf079c01ef2c910709e91a497d262080
 \
 ,.idea/inspectionProfiles/Project_Default.xml,4/9/496a238a6afa168dbaf6efd37bb459331589579c
+C
+testing/__init__.py,2/8/28d87011a30a20fbbb6ed8b1009948e83fde74e7
+K
+testing/test_job_example.py,7/0/70645aab8769a621b78fec7f9b1e8837acaf2491
+C
+testing/conftest.py,a/f/af796985e9f50e6571973468a07c84d79e04d426
