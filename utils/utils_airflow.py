@@ -15,6 +15,17 @@ log_finish = "Finished "
 #EMR-related helper functions
 
 def create_spark_job(job_name,file_path, dependencies_path, executor_memory, memory_fraction, shuffle_partitions, driver_memory = None):
+    '''
+
+    :param job_name: the name of the Spark job to run
+    :param file_path: location of the Spark job in the file system
+    :param dependencies_path: location of dependencies needed to run the job
+    :param executor_memory: how much memory to allocate to each executor
+    :param memory_fraction: the fraction of memory to allocate to compute and storage
+    :param shuffle_partitions: the number of partitions of an aggregated spark dataframe
+    :param driver_memory: the amount of memory allocated to the driver
+    :return: a list containing a dictionary with the required configuration
+    '''
     if driver_memory is not None:
         spark_step = [
             {
@@ -163,6 +174,13 @@ def cluster_config(jobflow_name,master_type, worker_type, master_instances,
 #python functions (to be used in the Python operator in a DAG file)
 
 def check_data_exists(aws_conn, bucket, prefix):
+    '''
+
+    :param aws_conn: the AWS connection ID
+    :param bucket: S3 bucket
+    :param prefix: subfolder within the bucket
+    :return: prints the names of all the files in that location
+    '''
     logging.info(f'{log_start} check that data exists in s3 bucket: {bucket}')
     source_s3 = S3Hook(aws_conn_id=aws_conn)
     keys = source_s3.list_keys(bucket_name=bucket,
@@ -172,6 +190,14 @@ def check_data_exists(aws_conn, bucket, prefix):
 
 
 def upload_data(aws_conn,local_file,file_key, bucket):
+    '''
+
+    :param aws_conn: the AWS connection ID
+    :param local_file: location of the file to be uploaded in your local computer
+    :param file_key: destination within the desired bucket where the file will be uploaded
+    :param bucket: name of the bucket where the file will be uploaded
+    :return:
+    '''
     try:
         s3 = S3Hook(aws_conn)
         logging.info(f"{log_start} uploading data onto S3 bucket")
