@@ -8,6 +8,9 @@ EMR cluster and Spark job creation
 
 import logging
 from airflow.providers.amazon.aws.hooks.s3 import S3Hook
+from airflow.providers.amazon.aws.hooks.glue_crawler import AwsGlueCrawlerHook
+
+
 
 log_start = "Starting to "
 log_finish = "Finished "
@@ -206,3 +209,7 @@ def upload_data(aws_conn,local_file,file_key, bucket):
     except Exception as e:
         logging.info(e)
         print("Unable to upload data onto S3. Please review logs")
+
+
+def run_crawler(aws_conn_id, crawler_name):
+    aws_glue =

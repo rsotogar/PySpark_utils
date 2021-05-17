@@ -12,17 +12,20 @@ def filter_data_by_name(df, data):
 
 
 def main():
-    df = utils.data_interceptor.read_mongo("test", "actors")
+    df = utils.data_interceptor.read_csv(path = "/Users/ramonsotogarcia/Desktop/Data/pokemon.csv",
+                                         partition_number=1,
+                                         cache=True)
     print(df.show())
-
 
 
 
 
 if __name__ == "__main__":
 
-    logger = logging.basicConfig()
-
+    #logging configuration
+    logging.basicConfig(level=logging.INFO,
+                         format='%(asctime)s,%(msecs)d %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
+                         datefmt='%Y-%m-%d:%H:%M:%S')
     #SQL parameters
     local_host = "localhost"
     mysql_user = "root"
@@ -40,7 +43,7 @@ if __name__ == "__main__":
     query = f"SELECT * FROM {mysql_db}.{mysql_table}"
 
     #set sql database parameters to facilitate data access
-    utils.data_interceptor.set_logger(logger)
+    utils.data_interceptor.set_logger(logging)
     utils.data_interceptor.set_sql_params(local_host, mysql_user, password, sql_driver= "com.mysql.jdbc.Driver")
 
     #set mongo database parameters to facilitate data access

@@ -22,7 +22,6 @@ class DataInterceptor:
         self.mongo_user = None
         self.mongo_pass = None
 
-
     def set_logger(self, logger):
         self.logger = logger
 
@@ -149,5 +148,36 @@ class DataInterceptor:
         df.count()
 
         return df
+    def read_csv(self, path, partition_number, schema = None, cache = False):
+        '''
+        :param path: the path pointing to the location of the csv file
+        :param schema: schema to pass to the data
+        :param partition_number: the number of partitions of the resulting spark dataframe
+        :return: spark dataframe
+        '''
 
+        try:
+            self.logger.info("Acessing CSV file in storage")
+            if schema is not None:
+                before_read = dt.now()
+                df = self.spark.read.csv(path,schema=schema, header = True, enforceSchema=True).repartition(partition_number)
+                after_read = dt.now()
+                self.logger.info(f"Acessing data took {after_read - before_read}")
+                if cache:
+                    df.cache()
+                    df.count()
+            else:
+                before_read = dt.now()
+                df = self.spark.read.csv(path, header = True).repartition(partition_number)
+                after_read = dt.now()
+                self.logger.info(f"Acessing data took {after_read - before_read}")
+                if cache:
+                    df.cache()
+                    df.count()
+        except Exception as e:
+            self.logger.info(e)
+            self.logger.info("Failed to access CSV file in storage")
+            df = self.spark.createDataFrame(self.spark.sparkContext.emptyRDD(), schema)
+
+        return df
 data_interceptor = DataInterceptor()
