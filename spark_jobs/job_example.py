@@ -26,6 +26,10 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO,
                          format='%(asctime)s,%(msecs)d %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
                          datefmt='%Y-%m-%d:%H:%M:%S')
+
+    #spark conf
+    config = {"spark.driver.memory": "0.5g", "spark.driver.cores": 2}
+
     #SQL parameters
     local_host = "localhost"
     mysql_user = "root"
@@ -44,10 +48,11 @@ if __name__ == "__main__":
 
     #set sql database parameters to facilitate data access
     utils.data_interceptor.set_logger(logging)
+    utils.data_interceptor.set_spark_conf(config)
+    utils.data_interceptor.set_spark()
     utils.data_interceptor.set_sql_params(local_host, mysql_user, password, sql_driver= "com.mysql.jdbc.Driver")
 
     #set mongo database parameters to facilitate data access
     utils.data_interceptor.set_mongo_params(mongo_host, mongo_user, mongo_pass)
-    spark = utils.data_interceptor.get_spark_session()
 
     main()

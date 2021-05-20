@@ -7,8 +7,8 @@ from datetime import datetime as dt
 
 class DataInterceptor:
     def __init__(self):
-        self.conf = SparkConf().set("spark.jars.packages", "org.mongodb.spark:mongo-spark-connector_2.11:2.3.2")
-        self.spark = SparkSession.builder.config(conf = self.conf).getOrCreate()
+        self.conf = None
+        self.spark = None
         self.logger = None
 
         #sql parameters
@@ -25,8 +25,21 @@ class DataInterceptor:
     def set_logger(self, logger):
         self.logger = logger
 
-    def get_spark_session(self):
-        return self.spark
+    def set_spark_conf(self, spark_conf):
+        try:
+            if not isinstance(spark_conf, dict):
+                raise TypeError
+            else:
+                for key, value in spark_conf.items():
+                    self.conf = SparkConf().set(key,value)
+                self.conf = SparkConf().set("spark.jars.packages",
+                                          "org.mongodb.spark:mongo-spark-connector_2.11:2.3.2")
+        except Exception as e:
+            self.logger.info(e)
+            self.logger.info("Spark conf could not be set")
+
+    def set_spark(self):
+        self.spark = SparkSession.builder.config(conf = self.conf).getOrCreate()
 
     def set_sql_params(self, sql_host, sql_user, sql_password, sql_driver):
         self.sql_host = sql_host
