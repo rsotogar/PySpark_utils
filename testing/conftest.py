@@ -16,3 +16,6 @@ def spark_session(request):
     spark = SparkSession.builder.config(conf = conf).getOrCreate()
     request.addfinalizer(lambda: spark.stop())
     return spark
+
+
+

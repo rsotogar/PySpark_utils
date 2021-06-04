@@ -63,7 +63,7 @@ class DataInterceptor:
             sql_password = self.sql_password
         if sql_user is None:
             sql_user = self.sql_user
-        sql_url = f"jdbc:mysql://{sql_host}:3306"
+        sql_url = f"jdbc:mysql://{sql_host}:3306/"
 
         if cache:
             before_read = dt.now()

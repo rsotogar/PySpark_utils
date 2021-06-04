@@ -12,9 +12,7 @@ def filter_data_by_name(df, data):
 
 
 def main():
-    df = utils.data_interceptor.read_csv(path = "/Users/ramonsotogarcia/Desktop/Data/pokemon.csv",
-                                         partition_number=1,
-                                         cache=True)
+    df = utils.data_interceptor.read_mongo(mongo_database="test", collection="actors")
     print(df.show())
 
 
@@ -33,7 +31,6 @@ if __name__ == "__main__":
     #SQL parameters
     local_host = "localhost"
     mysql_user = "root"
-    mysql_url = f"mysql://{local_host}:3306/"
     password = "Ilovebiotech1+"
     mysql_db = "tienda_aplicaciones"
     mysql_table = "tienda_apps"
