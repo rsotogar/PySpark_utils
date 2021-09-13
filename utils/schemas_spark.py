@@ -1,6 +1,7 @@
 from pyspark.sql.types import *
 
 
+
 def get_events_schema():
     schema = StructType([StructField("_id", StringType(), True), StructField("organizers", StringType(), True),
                          StructField("name", StringType(), True), StructField("timestart", StringType(), True),
