@@ -209,7 +209,3 @@ def upload_data(aws_conn,local_file,file_key, bucket):
     except Exception as e:
         logging.info(e)
         print("Unable to upload data onto S3. Please review logs")
-
-
-def run_crawler(aws_conn_id, crawler_name):
-    aws_glue =

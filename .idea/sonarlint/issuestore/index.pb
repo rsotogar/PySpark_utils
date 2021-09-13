@@ -23,3 +23,15 @@ K
 testing/test_job_example.py,7/0/70645aab8769a621b78fec7f9b1e8837acaf2491
 C
 testing/conftest.py,a/f/af796985e9f50e6571973468a07c84d79e04d426
+E
+spark_jobs/new_job.py,6/a/6afbf4dc65fbd87f2077a8bb0085f3672d8edb8b
+J
+spark_jobs/explode_test.py,e/1/e1ae1b85c4f76181a90c864048b08b8d7291ae6a
+F
+spark_jobs/new_test.py,8/1/8131b4554632fd21dd915e53a127bf690c489978
+F
+utils/schemas_spark.py,5/d/5d9cfe689fa1176de438a03cee37fcfed0bddcc9
+M
+spark_jobs/events_pipeline.py,d/f/df37ad9f719f07f34ebef6c6a2d55c917a64ed10
+S
+#airflow_dags/databricks_workflow.py,1/c/1c1b28625a4565f626a5be8de24972cb197c6cf9

@@ -25,21 +25,18 @@ class DataInterceptor:
     def set_logger(self, logger):
         self.logger = logger
 
-    def set_spark_conf(self, spark_conf):
-        try:
-            if not isinstance(spark_conf, dict):
-                raise TypeError
-            else:
-                for key, value in spark_conf.items():
-                    self.conf = SparkConf().set(key,value)
-                self.conf = SparkConf().set("spark.jars.packages",
-                                          "org.mongodb.spark:mongo-spark-connector_2.11:2.3.2")
-        except Exception as e:
-            self.logger.info(e)
-            self.logger.info("Spark conf could not be set")
+    def set_spark_conf(self):
+        self.conf = SparkConf().set("spark.jars.packages",
+                                          "org.mongodb.spark:mongo-spark-connector_2.12:3.0.1")
 
-    def set_spark(self):
-        self.spark = SparkSession.builder.config(conf = self.conf).getOrCreate()
+    def set_spark_session(self):
+        self.spark = SparkSession.builder.config(conf=self.conf).getOrCreate()
+
+    def get_spark_session(self):
+        return self.spark
+
+    def get_spark_context(self):
+        return self.spark._sc
 
     def set_sql_params(self, sql_host, sql_user, sql_password, sql_driver):
         self.sql_host = sql_host
@@ -99,7 +96,7 @@ class DataInterceptor:
         self.mongo_user = mongo_user
         self.mongo_pass = mongo_pass
 
-    def read_mongo(self, mongo_database, collection, mongo_host = None, mongo_user = None, mongo_pass = None,pipeline = None):
+    def read_mongo(self, mongo_database, collection, mongo_host=None, mongo_user=None, mongo_pass=None, pipeline=None):
         '''
         :param mongo_database: the mongo database containing the collection to read from
         :param collection: the mongo collection to import as a spark dataframe
@@ -116,25 +113,46 @@ class DataInterceptor:
             mongo_user = self.mongo_user
         if mongo_pass is None:
             mongo_pass = self.mongo_pass
-        mongo_url = f"mongodb://{mongo_user}:{mongo_pass}@{mongo_host}:27017/"
+        mongo_url = f"mongodb+srv://{mongo_user}:{mongo_pass}@{mongo_host}/"
 
         if pipeline is None:
             before_read = dt.now()
-            df = self.spark.read.format("com.mongodb.spark.sql.DefaultSource")\
+            df = self.spark.read.format("mongo")\
                 .option("uri", mongo_url + mongo_database + "." + collection)\
                 .load()
             after_read = dt.now()
         else:
             before_read = dt.now()
-            df = self.spark.read.format("com.mongodb.spark.sql.DefaultSource")\
+            df = self.spark.read.format("mongo")\
                 .option("uri", mongo_url + mongo_database + "." + collection)\
                 .option("pipeline", pipeline) \
                 .load()
             after_read = dt.now()
 
+        df.cache()
         num_records = df.count()
         self.logger.info(f"Total number of obtained records from {mongo_database}.{collection}: {num_records}. Accesing data took: {after_read - before_read}")
         return df
+
+    def write_mongo(self, df, mongo_database, mongo_collection, mode, mongo_host=None, mongo_user=None, mongo_pass=None):
+        if mongo_host is None:
+            mongo_host = self.mongo_host
+        if mongo_user is None:
+            mongo_user = self.mongo_user
+        if mongo_pass is None:
+            mongo_pass = self.mongo_pass
+
+        mongo_url = f"mongodb+srv://{mongo_user}:{mongo_pass}@{mongo_host}/"
+
+        try:
+            df.write.format("mongo").mode(mode)\
+                .option("uri", mongo_url)\
+                .option("database", mongo_database)\
+                .option("collection", mongo_collection)
+        except Exception as e:
+            self.logger.info("Unable to write data to Mongo. Please see the following error log:")
+            self.logger.info(e)
+
 
     def read_parquet(self, path, schema, partition_number):
         '''
@@ -145,45 +163,47 @@ class DataInterceptor:
         '''
         try:
             before_read = dt.now()
-            df = self.spark.read.parquet(path).repartition(partition_number)
+            df = self.spark.read.format("parquet").load(path=path, schema=schema).repartition(partition_number)
             after_read = dt.now()
             self.logger.info(f"Acessing data from S3 took: {after_read - before_read}")
-            if df.count() == 0:
-                self.logger.info("No records found. Creating empty dataframe with specified schema")
-                df = self.spark.createDataFrame(self.spark.sparkContext.emptyRDD(), schema)
 
         except Exception as e:
+            self.logger.info("Acessing S3 path failed. Creating empty dataframe with specified schema. Please review the folowing error:")
             self.logger.info(e)
-            self.logger.info("Acessing S3 path failed. Creating empty dataframe with specified schema")
-            df = self.spark.createDataFrame(self.spark.sparkContext.emptyRDD(), schema).repartition(partition_number)
+            df = self.spark.createDataFrame(self.spark.sparkContext.emptyRDD(), schema)\
+                .repartition(partition_number)
 
         df.cache()
         df.count()
 
         return df
-    def read_csv(self, path, partition_number, schema = None, cache = False):
+
+    def read_csv(self, path, partition_number, schema=None, cache=False):
         '''
         :param path: the path pointing to the location of the csv file
         :param schema: schema to pass to the data
         :param partition_number: the number of partitions of the resulting spark dataframe
+        :param cache: whether to cache the data in memory
         :return: spark dataframe
         '''
 
         try:
-            self.logger.info("Acessing CSV file in storage")
+            self.logger.info("Accessing CSV file in storage")
             if schema is not None:
                 before_read = dt.now()
-                df = self.spark.read.csv(path,schema=schema, header = True, enforceSchema=True).repartition(partition_number)
+                df = self.spark.read.csv(path,schema=schema, header=True, enforceSchema=True)\
+                    .repartition(partition_number)
                 after_read = dt.now()
-                self.logger.info(f"Acessing data took {after_read - before_read}")
+                self.logger.info(f"Accessing data took {after_read - before_read}")
                 if cache:
                     df.cache()
                     df.count()
             else:
                 before_read = dt.now()
-                df = self.spark.read.csv(path, header = True).repartition(partition_number)
+                df = self.spark.read.csv(path, header=True)\
+                    .repartition(partition_number)
                 after_read = dt.now()
-                self.logger.info(f"Acessing data took {after_read - before_read}")
+                self.logger.info(f"Accessing data took {after_read - before_read}")
                 if cache:
                     df.cache()
                     df.count()
@@ -193,4 +213,19 @@ class DataInterceptor:
             df = self.spark.createDataFrame(self.spark.sparkContext.emptyRDD(), schema)
 
         return df
+
+    def write_parquet(self, df, path, partition_columns = None):
+        '''
+        :param df: dataframe to write to storage
+        :param path: S3 path where the data will be stored
+        :param partition_columns: name of partition column (a list)
+        :return: None
+        '''
+        if partition_columns is not None:
+            df.write.parquet(path=path, mode="append",
+                        partitionBy=partition_columns, compression="snappy")
+        else:
+            df.write.parquet(path=path, mode="append", compression="snappy")
+
+
 data_interceptor = DataInterceptor()
