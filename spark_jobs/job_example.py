@@ -1,15 +1,6 @@
 from utils import utils
-from utils import schemas_spark
 import logging
-import pyspark.sql.functions as F
-from pyspark.sql.types import StructType, StringType, IntegerType, StructField
 
-def filter_data_by_name(df, data):
-    for column in df.columns:
-        df_filtered = df.filter(F.col(column) == data)
-        if df_filtered.count() > 0:
-            return True
-    return False
 
 
 def main():
@@ -25,30 +16,44 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO,
                          format='%(asctime)s,%(msecs)d %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
                          datefmt='%Y-%m-%d:%H:%M:%S')
+    #SQL
+    sql_type = "mysql"
+    sql_user = "root"
+    sql_pass = ""
+    sql_host = "localhost"
+    sql_driver = "com.mysql.cj.jdbc.Driver"
+    sql_query = """
+            (SELECT * FROM hogar.personas WHERE rol = 'hijo') as oliver
+        """
 
-    #spark conf
-    config = {"spark.driver.memory": "0.5g", "spark.driver.cores": 2}
+    #packages
+    mongo_jar = "org.mongodb.spark:mongo-spark-connector_2.12:3.0.1"
+    mysql_jar = "mysql:mysql-connector-java:8.0.26"
 
-    #SQL parameters
-    local_host = "localhost"
-    mysql_user = "root"
-    password = "Ilovebiotech1+"
-    mysql_db = "tienda_aplicaciones"
-    mysql_table = "tienda_apps"
 
-    #mongo parameters
-    mongo_host = "localhost"
+    #MONGO
+    #parameters
+    mongo_host = "localhost:27017"
     mongo_user = ""
     mongo_pass = ""
 
-    #sql queries
-    query = f"SELECT * FROM {mysql_db}.{mysql_table}"
 
     #set sql database parameters to facilitate data access
+    logging.basicConfig(level=logging.INFO,
+                        format='%(asctime)s,%(msecs)d %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
+                        datefmt='%Y-%m-%d:%H:%M:%S')
+
+    # set logger and spark parameters
     utils.data_interceptor.set_logger(logging)
-    utils.data_interceptor.set_spark_conf(config)
-    utils.data_interceptor.set_spark()
-    utils.data_interceptor.set_sql_params(local_host, mysql_user, password, sql_driver= "com.mysql.jdbc.Driver")
+    utils.data_interceptor.set_spark_conf(mongo_jar)
+    utils.data_interceptor.set_spark_session()
+
+    utils.data_interceptor.set_sql_params(sql_type=sql_type, sql_password=sql_pass, sql_host=sql_host,
+                                          sql_user=sql_user, sql_driver=sql_driver)
+
+    # get spark session and context
+    spark = utils.data_interceptor.get_spark_session()
+    sc = utils.data_interceptor.get_spark_context()
 
     #set mongo database parameters to facilitate data access
     utils.data_interceptor.set_mongo_params(mongo_host, mongo_user, mongo_pass)

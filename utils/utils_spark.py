@@ -77,6 +77,7 @@ def create_partition_columns(df, timestamp_column):
     return df
 
 
+
 def clean_string_columns(df):
     string_columns = [i[0] for i in df.dtypes if i[1].startswith("string")]
     for column in string_columns:
@@ -85,10 +86,49 @@ def clean_string_columns(df):
     return df
 
 
+
 def add_empty_string_columns(*columns, df):
     for column in columns:
         df = df.withColumn(column, F.lit("").cast(StringType()))
     return df
+
+
+
+def remove_null_values(df):
+    boolean_columns = [i[0] for i in df.dtypes if i[1].startswith("boolean")]
+    if len(boolean_columns) >= 1:
+        non_boolean_columns = [column for column in df.columns if column not in boolean_columns]
+        for column in non_boolean_columns:
+            df = df.filter(F.col(column).isNotNull())
+    else:
+        for column in df.columns:
+            df = df.filter(F.col(column).isNotNull())
+    return df
+
+
+
+def remove_duplicates(df):
+    logging.info("Finding duplicates in dataframe...")
+    potential_duplicates = df.groupBy(df.columns).count().filter("count >= 2")
+    if bool(potential_duplicates.head(1)):
+        logging.info("Duplicate rows found. Removing duplicates")
+        df = df.dropDuplicates()
+    else:
+        logging.info("No duplicates found")
+    return df
+
+
+
+def null_to_false(df):
+    boolean_columns = [i[0] for i in df.dtypes if i[1].startswith("boolean")]
+    if len(boolean_columns) >= 1:
+        logging.info("Converting null values to False in boolean columns")
+        for column in boolean_columns:
+            df = df.withColumn(column, F.when(F.col(column).isNull(), False).otherwise(F.col(column)))
+    else:
+        logging.info("There are no boolean columns in the dataframe")
+    return df
+
 
 
 
