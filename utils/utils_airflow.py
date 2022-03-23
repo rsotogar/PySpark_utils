@@ -1,211 +1,113 @@
-'''
-
-This utils file contains helper functions to enhance readability in an Airflow DAG by simplifying
-EMR cluster and Spark job creation
-
-'''
+"""
+This helper file contains helper functions that will improve readability in Airflow DAGs.
+"""
 
 
-import logging
-from airflow.providers.amazon.aws.hooks.s3 import S3Hook
-from airflow.providers.amazon.aws.hooks.glue_crawler import AwsGlueCrawlerHook
+# EMR-related helper functions
 
-
-
-log_start = "Starting to "
-log_finish = "Finished "
-
-#EMR-related helper functions
-
-def create_spark_job(job_name,file_path, dependencies_path, executor_memory, memory_fraction, shuffle_partitions, driver_memory = None):
-    '''
-
+def create_spark_job(
+        job_name,
+        file_path,
+        dependencies_path,
+        executor_memory,
+        memory_fraction,
+        shuffle_partitions,
+        driver_memory="1g"):
+    """
     :param job_name: the name of the Spark job to run
     :param file_path: location of the Spark job in the file system
     :param dependencies_path: location of dependencies needed to run the job
     :param executor_memory: how much memory to allocate to each executor
     :param memory_fraction: the fraction of memory to allocate to compute and storage
     :param shuffle_partitions: the number of partitions of an aggregated spark dataframe
-    :param driver_memory: the amount of memory allocated to the driver
+    :param driver_memory: the amount of memory allocated to the driver. Defaults to 1gb.
     :return: a list containing a dictionary with the required configuration
-    '''
-    if driver_memory is not None:
-        spark_step = [
-            {
-                "Name": job_name,
-                "ActionOnFailure": "CONTINUE",
-                "HadoopJarStep": {
-                    "Jar": "command-runner.jar",
-                    "Args": ["spark-submit", "--deploy-mode", "client",
-                                   "--conf", f"spark.driver.memory={driver_memory}",
-                                   "--conf", f"spark.executor.memory={executor_memory}",
-                                   "--conf", f"spark.memory.fraction={memory_fraction}",
-                                   "--conf", f"spark.sql.shuffle.partitions={shuffle_partitions}",
-                                   "--py-files", dependencies_path, file_path]
-                }
+    """
+    spark_step = [
+        {
+            "Name": job_name,
+            "ActionOnFailure": "CONTINUE",
+            "HadoopJarStep": {
+                "Jar": "command-runner.jar",
+                "Args": ["spark-submit", "--deploy-mode", "client",
+                         "--conf", f"spark.driver.memory={driver_memory}",
+                         "--conf", f"spark.executor.memory={executor_memory}",
+                         "--conf", f"spark.memory.fraction={memory_fraction}",
+                         "--conf", f"spark.sql.shuffle.partitions={shuffle_partitions}",
+                         "--py-files", dependencies_path, file_path]
             }
-        ]
-    else:
-        spark_step = [
-            {
-                "Name": job_name,
-                "ActionOnFailure": "CONTINUE",
-                "HadoopJarStep": {
-                    "Jar": "command-runner.jar",
-                    "Args": ["spark-submit", "--deploy-mode", "client",
-                             "--conf", f"spark.driver.memory=1g",
-                             "--conf", f"spark.executor.memory={executor_memory}",
-                             "--conf", f"spark.memory.fraction={memory_fraction}",
-                             "--conf", f"spark.sql.shuffle.partitions={shuffle_partitions}",
-                             "--py-files", dependencies_path, file_path]
-                }
-            }
-        ]
+        }
+    ]
     return spark_step
 
-def cluster_config(jobflow_name,master_type, worker_type, master_instances,
-                   worker_instances, cluster_region, bootstrap_path = None):
-    if bootstrap_path is not None:
-        cluster_conf = {"Name": jobflow_name,
-                        "LogUri": "s3://emr-pipeline-id-XXX/XXX/",
-                        "ReleaseLabel": "emr-5.19.0",
-                        "Instances": {
-                            "InstanceGroups": [
-                                {
-                                    "Name": "Master nodes",
-                                    "Market": "ON_DEMAND",
-                                    "InstanceRole": "MASTER",
-                                    "InstanceType": master_type,
-                                    "InstanceCount": master_instances
-                                },
-                                {
-                                    "Name": "Slave nodes",
-                                    "Market": "ON_DEMAND",
-                                    "InstanceRole": "CORE",
-                                    "InstanceType": worker_type,
-                                    "InstanceCount": worker_instances
-                                }
-                            ],
-                            "Ec2KeyName": "PEMFILENAME",
-                            "KeepJobFlowAliveWhenNoSteps": True,
-                            'EmrManagedMasterSecurityGroup': 'sg-XXXXXXXXX',
-                            'EmrManagedSlaveSecurityGroup': 'sg-XXXXXXXXXX',
-                            'Placement': {
-                                'AvailabilityZone': cluster_region,
-                            },
 
-                        },
-                        "BootstrapActions": [
-                            {
-                                'Name': 'copy config to local',
-                                'ScriptBootstrapAction': {
-                                    'Path': bootstrap_path  #path to the bootstrap script
-                                }
-                            }
-                        ],
+def cluster_config(
+        jobflow_name,
+        master_type,
+        worker_type,
+        master_instances,
+        worker_instances,
+        bootstrap_path,
+        emr_release,
+        master_sg,
+        worker_sg,
+        cluster_region,
+        log_uri
+):
+    cluster_conf = {
+        "Name": jobflow_name,
+        "LogUri": log_uri,
+        "ReleaseLabel": emr_release,
+        "Instances": {
+            "InstanceGroups": [
+                {
+                    "Name": "Master nodes",
+                    "Market": "ON_DEMAND",
+                    "InstanceRole": "MASTER",
+                    "InstanceType": master_type,
+                    "InstanceCount": master_instances
+                },
+                {
+                    "Name": "Slave nodes",
+                    "Market": "ON_DEMAND",
+                    "InstanceRole": "CORE",
+                    "InstanceType": worker_type,
+                    "InstanceCount": worker_instances
+                }
+            ],
+            "Ec2KeyName": "PEMFILENAME",
+            "KeepJobFlowAliveWhenNoSteps": True,
+            'EmrManagedMasterSecurityGroup': master_sg,
+            'EmrManagedSlaveSecurityGroup': worker_sg,
+            'Placement': {
+                'AvailabilityZone': cluster_region,
+            },
 
-                        "Applications": [
-                            { 'Name': 'hadoop' },
-                         { 'Name': 'spark' }
-                        ],
-                        "VisibleToAllUsers": True,
-                        "JobFlowRole": "EMR_EC2_DefaultRole",
-                        "ServiceRole": "EMR_DefaultRole",
-                        "Tags": [
-                            {
-                                "Key": "app",
-                                "Value": "analytics"
-                            },
-                            {
-                                "Key": "environment",
-                                "Value": "development"
-                            }
-                        ]
-                        }
-    else:
-        cluster_conf = {"Name": jobflow_name,
-                        "LogUri": "s3://emr-pipeline-id-XXX/XXX/",
-                        "ReleaseLabel": "emr-5.19.0",
-                        "Instances": {
-                            "InstanceGroups": [
-                                {
-                                    "Name": "Master nodes",
-                                    "Market": "ON_DEMAND",
-                                    "InstanceRole": "MASTER",
-                                    "InstanceType": master_type,
-                                    "InstanceCount": master_instances
-                                },
-                                {
-                                    "Name": "Slave nodes",
-                                    "Market": "ON_DEMAND",
-                                    "InstanceRole": "CORE",
-                                    "InstanceType": worker_type,
-                                    "InstanceCount": worker_instances
-                                }
-                            ],
-                            "Ec2KeyName": "PEMFILENAME",
-                            "KeepJobFlowAliveWhenNoSteps": True,
-                            'EmrManagedMasterSecurityGroup': 'sg-XXXXXXXXX',
-                            'EmrManagedSlaveSecurityGroup': 'sg-XXXXXXXXXX',
-                            'Placement': {
-                                'AvailabilityZone': cluster_region,
-                            },
-
-                        },
-                        "Applications": [
-                            {'Name': 'hadoop'},
-                            {'Name': 'spark'}
-                        ],
-                        "VisibleToAllUsers": True,
-                        "JobFlowRole": "EMR_EC2_DefaultRole",
-                        "ServiceRole": "EMR_DefaultRole",
-                        "Tags": [
-                            {
-                                "Key": "app",
-                                "Value": "analytics"
-                            },
-                            {
-                                "Key": "environment",
-                                "Value": "development"
-                            }
-                        ]
-                        }
-
+        },
+        "BootstrapActions": [
+            {
+                'Name': 'copy config to local',
+                'ScriptBootstrapAction': {
+                    'Path': bootstrap_path  # path to the bootstrap script
+                }
+            }
+        ],
+        "Applications": [
+            {'Name': 'hadoop'},
+            {'Name': 'spark'}
+        ],
+        "VisibleToAllUsers": True,
+        "JobFlowRole": "EMR_EC2_DefaultRole",
+        "ServiceRole": "EMR_DefaultRole",
+        "Tags": [
+            {
+                "Key": "app",
+                "Value": "analytics"
+            },
+            {
+                "Key": "environment",
+                "Value": "development"
+            }
+        ]
+    }
     return cluster_conf
-
-
-#python functions (to be used in the Python operator in a DAG file)
-
-def check_data_exists(aws_conn, bucket, prefix):
-    '''
-
-    :param aws_conn: the AWS connection ID
-    :param bucket: S3 bucket
-    :param prefix: subfolder within the bucket
-    :return: prints the names of all the files in that location
-    '''
-    logging.info(f'{log_start} check that data exists in s3 bucket: {bucket}')
-    source_s3 = S3Hook(aws_conn_id=aws_conn)
-    keys = source_s3.list_keys(bucket_name=bucket,
-                               prefix=prefix)
-    logging.info('keys {}'.format(keys))
-    logging.info(f'{log_finish} check that data exists in s3 bucket: {bucket}')
-
-
-def upload_data(aws_conn,local_file,file_key, bucket):
-    '''
-
-    :param aws_conn: the AWS connection ID
-    :param local_file: location of the file to be uploaded in your local computer
-    :param file_key: destination within the desired bucket where the file will be uploaded
-    :param bucket: name of the bucket where the file will be uploaded
-    :return:
-    '''
-    try:
-        s3 = S3Hook(aws_conn)
-        logging.info(f"{log_start} uploading data onto S3 bucket")
-        s3.load_file(filename=local_file, key=file_key ,bucket_name=bucket, replace=True)
-        logging.info(f"{log_finish} uploading data onto S3 bucket")
-    except Exception as e:
-        logging.info(e)
-        print("Unable to upload data onto S3. Please review logs")

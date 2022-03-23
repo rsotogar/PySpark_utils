@@ -4,8 +4,8 @@ import logging
 
 
 def main():
-    df = utils.data_interceptor.read_mongo(mongo_database="test", collection="actors")
-    print(df.show())
+    df = utils.data_interceptor.read_sql(sql_query)
+    df.show()
 
 
 
@@ -27,8 +27,7 @@ if __name__ == "__main__":
         """
 
     #packages
-    mongo_jar = "org.mongodb.spark:mongo-spark-connector_2.12:3.0.1"
-    mysql_jar = "mysql:mysql-connector-java:8.0.26"
+    jars = "org.mongodb.spark:mongo-spark-connector_2.12:3.0.1,mysql:mysql-connector-java:8.0.26"
 
 
     #MONGO
@@ -45,7 +44,7 @@ if __name__ == "__main__":
 
     # set logger and spark parameters
     utils.data_interceptor.set_logger(logging)
-    utils.data_interceptor.set_spark_conf(mongo_jar)
+    utils.data_interceptor.set_spark_conf(jars)
     utils.data_interceptor.set_spark_session()
 
     utils.data_interceptor.set_sql_params(sql_type=sql_type, sql_password=sql_pass, sql_host=sql_host,
